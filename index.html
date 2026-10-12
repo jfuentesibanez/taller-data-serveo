@@ -28,17 +28,18 @@
 <div id="bar">
   <div class="grp">
     <button id="prev" aria-label="Anterior">&#8592;</button>
-    <span id="count">1 / 27</span>
+    <span id="count">1 / 28</span>
     <button id="next" aria-label="Siguiente">&#8594;</button>
   </div>
-  <span id="help" style="color:var(--muted)">Flechas o clic para avanzar · F pantalla completa</span>
+  <span id="help" style="color:var(--muted)">Flechas o clic para avanzar · F pantalla completa · D demo del agente</span>
   <div class="grp">
     <button id="fs">Pantalla completa</button>
+    <a href="agente.html" target="_blank">Demo agente</a>
     <a href="Taller_Data_Serveo.pdf" download>PDF</a>
   </div>
 </div>
 <script>
-  const N = 27;
+  const N = 28;
   const src = i => "slides/" + String(i).padStart(2, "0") + ".jpg";
   let cur = 1;
   const img = document.getElementById("slide"), count = document.getElementById("count"), prog = document.getElementById("progress");
@@ -67,6 +68,7 @@
     else if (e.key === "Home") show(1);
     else if (e.key === "End") show(N);
     else if (e.key === "f" || e.key === "F") fullscreen();
+    else if (e.key === "d" || e.key === "D") window.open("agente.html", "_blank");
   });
   let t; const wake = () => { document.body.classList.remove("idle"); clearTimeout(t); t = setTimeout(() => document.body.classList.add("idle"), 2500); };
   ["mousemove", "keydown", "touchstart"].forEach(ev => document.addEventListener(ev, wake)); wake();

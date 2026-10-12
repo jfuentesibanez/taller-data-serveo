@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>El agente que paga facturas</title>
+<style>
+  :root {
+    --ink: #1C1C28; --muted: #5E5E6B; --line: #E2E2DE; --bg: #F6F6F3; --card: #FFFFFF;
+    --green: #1E8C5A; --green-t: #E8F5EE; --red: #D93025; --red-t: #FDECEA; --amber: #E8A100; --amber-t: #FFF4D6; --grey: #D9D9D4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+  body { min-height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 20px; padding: 14px 28px; background: var(--card); border-bottom: 1px solid var(--line); }
+  header img { height: 40px; }
+  header h1 { margin: 0; font-size: 26px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 380px; gap: 18px; padding: 18px 28px 22px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); }
+  /* como funciona */
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.35; }
+  .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: bold; font-size: 14px; }
+  /* rondas */
+  .rounds { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .round { display: flex; flex-direction: column; justify-content: flex-start; border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; background: var(--card); transition: border-color .2s, box-shadow .2s; text-align: left; font: inherit; color: inherit; }
+  .round:hover { border-color: #b9b9b2; }
+  .round.active { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(28,28,40,.08); }
+  .round .tag { font-size: 12px; font-weight: bold; letter-spacing: 1px; color: var(--muted); }
+  .round .t { font-size: 19px; font-weight: bold; margin: 4px 0 6px; }
+  .round .d { font-size: 14px; color: var(--muted); line-height: 1.4; }
+  .rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink); }
+  .rules li { padding: 3px 0; }
+  .rules li::before { content: "✓ "; color: var(--green); font-weight: bold; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+  .btn { font: inherit; font-size: 17px; font-weight: bold; padding: 12px 26px; border-radius: 10px; border: none; cursor: pointer; }
+  .btn.go { background: var(--green); color: #fff; }
+  .btn.go:disabled { background: #9cc9b2; cursor: default; }
+  .btn.reset { background: none; border: 1px solid #b9b9b2; color: var(--ink); font-weight: normal; }
+  .keys { color: var(--muted); font-size: 13px; margin-left: auto; }
+  /* contadores */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  .stat { border-radius: 12px; padding: 12px 14px; background: var(--bg); }
+  .stat .l { font-size: 13px; color: var(--muted); }
+  .stat .v { font-size: 30px; font-weight: bold; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat.err { background: var(--red-t); } .stat.err .v { color: var(--red); }
+  .stat.rev { background: var(--amber-t); } .stat.rev .v { color: #9a6a00; }
+  /* facturas */
+  .gridwrap { margin-top: 14px; }
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  #grid { display: grid; grid-template-columns: repeat(25, 1fr); gap: 4px; }
+  .inv { aspect-ratio: 1.35; border-radius: 3px; background: var(--grey); transition: background .15s, transform .15s; }
+  .inv.ok { background: var(--green); }
+  .inv.bad { background: var(--red); transform: scale(1.15); }
+  .inv.rev { background: var(--amber); transform: scale(1.15); }
+  .inv.now { outline: 2px solid var(--ink); outline-offset: 1px; }
+  /* feed */
+  aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .doing { font-size: 15px; min-height: 64px; }
+  .doing .who { font-weight: bold; }
+  .doing .what { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  #feed { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; max-height: 470px; }
+  .ev { border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.35; animation: pop .25s ease-out; }
+  .ev.bad { background: var(--red-t); border-left: 0; }
+  .ev.rev { background: var(--amber-t); }
+  .ev b { display: block; font-size: 14px; }
+  .ev .amt { float: right; font-weight: bold; }
+  .ev.bad .amt { color: var(--red); }
+  .empty { color: var(--muted); font-size: 14px; }
+  @keyframes pop { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  /* resultado */
+  #result { display: none; position: fixed; inset: 0; background: rgba(28,28,40,.55); align-items: center; justify-content: center; z-index: 10; }
+  #result.show { display: flex; }
+  .res { background: #fff; border-radius: 16px; padding: 30px 34px; max-width: 760px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .res h3 { margin: 0 0 6px; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .res .big { font-size: 34px; font-weight: bold; line-height: 1.2; margin: 6px 0 14px; }
+  .res p { font-size: 17px; line-height: 1.5; margin: 8px 0; color: #33334a; }
+  .res .row { display: flex; gap: 12px; margin: 16px 0 6px; }
+  .res .row div { flex: 1; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--muted); }
+  .res .row b { display: block; font-size: 22px; color: var(--ink); }
+  .res .msg { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 18px; font-weight: bold; line-height: 1.4; }
+  .res .close { margin-top: 18px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } #feed { max-height: 300px; } .how { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="fc_logo.png" alt="FACILITYCORP">
+  <div>
+    <h1>El agente que paga facturas</h1>
+    <p>Simulación · 200 facturas de proveedores de septiembre · Agente de cuentas a pagar de FACILITYCORP</p>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="panel">
+      <h2>Cómo funciona esta demo</h2>
+      <div class="how">
+        <div class="step"><span class="num">1</span><span>El agente lee <b>200 facturas</b> de proveedores, una a una, a velocidad de máquina.</span></div>
+        <div class="step"><span class="num">2</span><span>Para cada factura decide: <b>pagarla</b> o <b>enviarla a revisión</b> a una persona.</span></div>
+        <div class="step"><span class="num">3</span><span>Entre las 200 hay <b>15 facturas con errores reales</b>: duplicadas, material no recibido, importes mal escritos…</span></div>
+      </div>
+
+      <div class="rounds">
+        <button class="round active" data-round="1">
+          <div class="tag">RONDA 1</div>
+          <div class="t">Agente sin validaciones</div>
+          <div class="d">Lee la factura y la paga. Confía en que los datos están bien. Es lo que pasa si automatizamos el proceso tal como está hoy.</div>
+        </button>
+        <button class="round" data-round="2">
+          <div class="tag">RONDA 2</div>
+          <div class="t">Agente con validaciones</div>
+          <div class="d">El mismo agente, con los mismos datos, pero antes de pagar cruza la factura con el pedido, el albarán y el maestro de proveedores:</div>
+          <ul class="rules">
+            <li>Cantidad facturada ≤ cantidad recibida en el albarán</li>
+            <li>Precio igual al del pedido de compra</li>
+            <li>No pagar dos veces el mismo albarán</li>
+            <li>Cuenta bancaria igual a la del proveedor</li>
+          </ul>
+        </button>
+      </div>
+
+      <div class="controls">
+        <button class="btn go" id="go">▶ Lanzar agente</button>
+        <button class="btn reset" id="reset">Reiniciar</button>
+        <span class="keys">Teclado: 1 y 2 eligen ronda · Espacio lanza · R reinicia</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="l">Facturas procesadas</div><div class="v" id="sProc">0 / 200</div></div>
+        <div class="stat"><div class="l">Tiempo del agente</div><div class="v" id="sTime">0,0 s</div></div>
+        <div class="stat err"><div class="l">Pagado por error</div><div class="v" id="sErr">0 €</div></div>
+        <div class="stat rev"><div class="l">Enviadas a revisión</div><div class="v" id="sRev">0</div></div>
+      </div>
+
+      <div class="gridwrap">
+        <div class="legend">
+          <span style="--c: var(--grey)">Pendiente</span>
+          <span style="--c: var(--green)">Pagada correctamente</span>
+          <span style="--c: var(--red)">Pagada con error</span>
+          <span style="--c: var(--amber)">Enviada a revisión</span>
+        </div>
+        <div id="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h2>Ahora mismo</h2>
+      <div class="doing" id="doing"><span class="empty">Elige una ronda y pulsa «Lanzar agente».</span></div>
+    </div>
+    <div class="panel" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <h2 id="feedTitle">Facturas con problema</h2>
+      <div id="feed"><span class="empty">Aquí aparecerán las facturas con problema según las procese el agente.</span></div>
+    </div>
+  </aside>
+</main>
+
+<div id="result"><div class="res" id="resBox"></div></div>
+
+<script>
+// ---------- Datos: 200 facturas ficticias ----------
+const SUP = [
+  ["Suministros Climatec Andalucía", "CLM"], ["Electro Levante Distribución", "ELV"], ["Fontanería Industrial Centro", "FIC"],
+  ["Material Eléctrico del Norte", "MEN"], ["Ascensores Iberlift", "IBL"], ["Pinturas y Revestimientos Tajo", "PRT"],
+  ["Extintores Seguridad Total", "EST"], ["Ferretería Profesional Meseta", "FPM"], ["Climatización Mediterránea", "CMD"],
+  ["Cerrajería Rápida Madrid", "CRM"], ["Iluminación LED Solutions", "LED"], ["Hidráulica Balear", "HBA"]
+];
+let seed = 2610;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+const eur = v => v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+const eur0 = v => Math.round(v).toLocaleString("es-ES") + " €";
+
+const invoices = [];
+for (let i = 0; i < 200; i++) {
+  const s = SUP[Math.floor(rnd() * SUP.length)];
+  const base = Math.round((60 + Math.pow(rnd(), 2) * 1800) * 100) / 100;
+  invoices.push({ sup: s[0], num: `FAC-${s[1]}-26-${String(1000 + Math.floor(rnd() * 8999))}`, amount: Math.round(base * 1.21 * 100) / 100, err: null, fp: null });
+}
+// 15 errores reales (importe = lo que se paga de más) y 2 falsos positivos
+const ERR = [
+  { pos: 7,   sup: "Suministros Climatec Andalucía", num: "FAC-CLM-26-1294", amount: 773.07, type: "Cantidad mayor que la recibida", why: "Factura 3 filtros; el albarán ALB-CLM-26-08812 solo recibió 2.", loss: 29.65, rule: 0 },
+  { pos: 18,  type: "Factura duplicada", why: "Mismo albarán y mismo importe que una factura ya pagada, con otro número.", full: true, rule: 2 },
+  { pos: 29,  type: "Precio distinto al del pedido", why: "Cobra 412 € por un motor que el pedido fijó en 298 €.", amount: 498.52, loss: 137.94, rule: 1 },
+  { pos: 41,  type: "Importe mal escrito (x100)", why: "Una coma desplazada: 45.620,00 € en lugar de 456,20 €.", amount: 45620.00, loss: 45163.80, rule: 1 },
+  { pos: 55,  type: "Material no recibido", why: "No hay albarán firmado: el material nunca llegó a la obra.", full: true, rule: 0 },
+  { pos: 63,  type: "Cuenta bancaria cambiada", why: "El IBAN no coincide con el del maestro de proveedores. Posible fraude.", amount: 8940.00, full: true, rule: 3 },
+  { pos: 77,  type: "Factura duplicada", why: "Reenvío del proveedor con otro número de factura.", full: true, rule: 2 },
+  { pos: 88,  type: "Cantidad mayor que la recibida", why: "Factura 12 luminarias; el albarán recoge 10.", amount: 1089.00, loss: 181.50, rule: 0 },
+  { pos: 102, type: "Precio distinto al del pedido", why: "Tarifa de 2025 en lugar de la pactada para 2026.", amount: 2364.34, loss: 214.94, rule: 1 },
+  { pos: 117, type: "Material no recibido", why: "Pedido cancelado, pero el proveedor lo factura igual.", full: true, rule: 0 },
+  { pos: 129, type: "Factura duplicada", why: "La misma factura llegó por correo y por el portal de proveedores.", full: true, rule: 2 },
+  { pos: 141, type: "Cantidad mayor que la recibida", why: "Factura 6 extintores; el albarán recoge 4.", amount: 726.00, loss: 242.00, rule: 0 },
+  { pos: 158, type: "Precio distinto al del pedido", why: "Recargo por urgencia no aprobado en el pedido.", amount: 1512.50, loss: 302.50, rule: 1 },
+  { pos: 172, type: "Cantidad mayor que la recibida", why: "Factura 40 m de tubería; el albarán recoge 25.", amount: 871.20, loss: 326.70, rule: 0 },
+  { pos: 189, type: "Factura duplicada", why: "Mismo pedido facturado dos veces en el mismo mes.", full: true, rule: 2 },
+];
+ERR.forEach(e => {
+  const inv = invoices[e.pos];
+  if (e.sup) { inv.sup = e.sup; inv.num = e.num; }
+  if (e.amount) inv.amount = e.amount;
+  inv.err = { type: e.type, why: e.why, loss: e.full ? inv.amount : e.loss, rule: e.rule };
+});
+[[95, "Albarán pendiente de registrar: el material sí llegó, pero aún no consta en el sistema."], [150, "Pequeña diferencia de redondeo con el pedido (0,03 €)."]].forEach(([p, why]) => invoices[p].fp = why);
+const RULES = ["Cantidad facturada ≤ recibida", "Precio igual al del pedido", "Un albarán, un pago", "IBAN del maestro de proveedores"];
+
+// ---------- Estado ----------
+let round = 1, timer = null, idx = 0, t0 = 0, errSum = 0, revCount = 0, paid = 0, running = false, done = false;
+const $ = id => document.getElementById(id);
+const grid = $("grid");
+const cells = invoices.map(() => { const d = document.createElement("div"); d.className = "inv"; grid.appendChild(d); return d; });
+
+function setRound(r) {
+  if (running) return;
+  round = r;
+  document.querySelectorAll(".round").forEach(b => b.classList.toggle("active", +b.dataset.round === r));
+  reset();
+}
+function reset() {
+  clearInterval(timer); running = false; done = false; idx = 0; errSum = 0; revCount = 0; paid = 0;
+  cells.forEach(c => c.className = "inv");
+  $("go").disabled = false; $("go").textContent = "▶ Lanzar agente";
+  $("sProc").textContent = "0 / 200"; $("sTime").textContent = "0,0 s"; $("sErr").textContent = "0 €"; $("sRev").textContent = "0";
+  $("feed").innerHTML = '<span class="empty">Aquí aparecerán las facturas con problema según las procese el agente.</span>';
+  $("feedTitle").textContent = round === 1 ? "Facturas pagadas con error" : "Facturas enviadas a revisión";
+  $("doing").innerHTML = `<span class="empty">Ronda ${round} preparada. Pulsa «Lanzar agente».</span>`;
+  $("result").classList.remove("show");
+}
+function addEvent(cls, inv, title, why, amt) {
+  const f = $("feed"); if (f.querySelector(".empty")) f.innerHTML = "";
+  const d = document.createElement("div"); d.className = "ev " + cls;
+  d.innerHTML = `<span class="amt">${amt}</span><b>${title}</b>${inv.sup} · ${inv.num}<br>${why}`;
+  f.prepend(d);
+}
+function step() {
+  if (idx > 0) cells[idx - 1].classList.remove("now");
+  if (idx >= invoices.length) return finish();
+  const inv = invoices[idx], c = cells[idx];
+  c.classList.add("now");
+  let action;
+  if (round === 1) {
+    paid += inv.amount;
+    if (inv.err) { c.classList.add("bad"); errSum += inv.err.loss; addEvent("bad", inv, inv.err.type, inv.err.why, "+" + eur(inv.err.loss)); action = `<span style="color:var(--red)">Pagada · ${inv.err.type}</span>`; }
+    else { c.classList.add("ok"); action = "Pagada"; }
+  } else {
+    if (inv.err) { c.classList.add("rev"); revCount++; addEvent("rev", inv, "A revisión · " + RULES[inv.err.rule], inv.err.why, eur(inv.amount)); action = `<span style="color:#9a6a00">A revisión · regla «${RULES[inv.err.rule]}»</span>`; }
+    else if (inv.fp) { c.classList.add("rev"); revCount++; addEvent("rev", inv, "A revisión · falsa alarma", inv.fp, eur(inv.amount)); action = `<span style="color:#9a6a00">A revisión · falsa alarma</span>`; }
+    else { c.classList.add("ok"); paid += inv.amount; action = "Validada y pagada"; }
+  }
+  $("doing").innerHTML = `<div class="who">${inv.num} · ${eur(inv.amount)}</div><div class="what">${inv.sup}</div><div class="what">${action}</div>`;
+  idx++;
+  $("sProc").textContent = `${idx} / 200`;
+  $("sTime").textContent = ((performance.now() - t0) / 1000).toFixed(1).replace(".", ",") + " s";
+  $("sErr").textContent = eur0(errSum);
+  $("sRev").textContent = revCount;
+}
+function launch() {
+  if (running) return;
+  if (done) reset();
+  running = true; t0 = performance.now();
+  $("go").disabled = true; $("go").textContent = "Procesando…";
+  timer = setInterval(step, 50);
+}
+function finish() {
+  clearInterval(timer); running = false; done = true;
+  $("go").disabled = false; $("go").textContent = "↻ Repetir ronda";
+  const secs = ((performance.now() - t0) / 1000).toFixed(0);
+  const nErr = invoices.filter(i => i.err).length;
+  let html;
+  if (round === 1) {
+    html = `<h3 style="color:var(--red)">Ronda 1 · Agente sin validaciones</h3>
+      <div class="big">En ${secs} segundos ha pagado ${nErr} facturas con error: ${eur0(errSum)} que no debíamos.</div>
+      <div class="row"><div><b>200</b>facturas pagadas</div><div><b>${eur0(paid)}</b>pagado en total</div><div><b>${secs} s</b>una persona tardaría unos 2 días</div></div>
+      <p>El agente no se ha inventado ningún error: todos estaban ya en los datos. Lo que ha cambiado es la velocidad. Una persona quizá habría frenado ante una factura de 45.620 € por un repuesto; el agente no tenía ninguna regla para dudar.</p>
+      <div class="msg">Un agente no crea los errores: los propaga más rápido y más lejos.</div>`;
+  } else {
+    const fps = invoices.filter(i => i.fp).length;
+    html = `<h3 style="color:var(--green)">Ronda 2 · Agente con validaciones</h3>
+      <div class="big">Mismo agente, mismos datos: 0 € pagados por error.</div>
+      <div class="row"><div><b>${200 - revCount}</b>facturas validadas y pagadas</div><div><b>${revCount}</b>enviadas a revisión</div><div><b>${nErr} + ${fps}</b>errores reales + falsas alarmas</div></div>
+      <p>Con cuatro reglas sencillas, el agente separa las ${revCount} facturas dudosas y paga el resto. Una persona revisa ${revCount} facturas en lugar de 200. Dos son falsas alarmas: el sistema no es perfecto, pero el coste de una revisión de más es mínimo.</p>
+      <div class="msg">La calidad del dato y las reglas de validación deciden si el agente detecta el error o lo ejecuta.</div>`;
+  }
+  $("resBox").innerHTML = html + `<div class="close"><button class="btn go" onclick="document.getElementById('result').classList.remove('show')">Ver el detalle</button>
+    ${round === 1 ? '<button class="btn reset" onclick="setRound(2)">Ir a la ronda 2 →</button>' : ''}</div>`;
+  setTimeout(() => $("result").classList.add("show"), 400);
+}
+document.querySelectorAll(".round").forEach(b => b.addEventListener("click", () => setRound(+b.dataset.round)));
+$("go").onclick = launch; $("reset").onclick = reset;
+document.addEventListener("keydown", e => {
+  if (e.key === "1") setRound(1); else if (e.key === "2") setRound(2);
+  else if (e.key === " ") { e.preventDefault(); launch(); }
+  else if (e.key === "r" || e.key === "R") reset();
+  else if (e.key === "Escape") $("result").classList.remove("show");
+});
+reset();
+</script>
+</body>
+</html>
