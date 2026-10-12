@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Taller de Data</title>
+<style>
+  :root { --bg: #111118; --fg: #ffffff; --muted: #9a9aa6; --accent: #ff4e00; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: Arial, Helvetica, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  #slide { max-width: 100vw; max-height: 100vh; width: auto; height: auto; display: block; user-select: none; -webkit-user-drag: none; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; justify-content: space-between;
+         padding: 8px 16px; background: rgba(17,17,24,.85); font-size: 14px; transition: opacity .3s; }
+  body.idle #bar { opacity: 0; }
+  #bar button, #bar a { background: none; border: 1px solid #44445a; color: var(--fg); padding: 6px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; }
+  #bar button:hover, #bar a:hover { border-color: var(--accent); }
+  #count { color: var(--muted); min-width: 70px; text-align: center; }
+  #progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--accent); transition: width .2s; }
+  .grp { display: flex; gap: 8px; align-items: center; }
+  @media (max-width: 600px) { #help { display: none; } }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="stage"><img id="slide" alt="Diapositiva"></div>
+<div id="bar">
+  <div class="grp">
+    <button id="prev" aria-label="Anterior">&#8592;</button>
+    <span id="count">1 / 27</span>
+    <button id="next" aria-label="Siguiente">&#8594;</button>
+  </div>
+  <span id="help" style="color:var(--muted)">Flechas o clic para avanzar · F pantalla completa</span>
+  <div class="grp">
+    <button id="fs">Pantalla completa</button>
+    <a href="Taller_Data_Serveo.pdf" download>PDF</a>
+  </div>
+</div>
+<script>
+  const N = 27;
+  const src = i => "slides/" + String(i).padStart(2, "0") + ".jpg";
+  let cur = 1;
+  const img = document.getElementById("slide"), count = document.getElementById("count"), prog = document.getElementById("progress");
+  const cache = [];
+  for (let i = 1; i <= N; i++) { const p = new Image(); p.src = src(i); cache.push(p); }
+  function show(i) {
+    cur = Math.max(1, Math.min(N, i));
+    img.src = src(cur);
+    count.textContent = cur + " / " + N;
+    prog.style.width = (cur / N * 100) + "%";
+    try { history.replaceState(null, "", "#" + cur); } catch (e) {}
+  }
+  const h = parseInt(location.hash.slice(1), 10);
+  show(isNaN(h) ? 1 : h);
+  document.getElementById("prev").onclick = e => { e.stopPropagation(); show(cur - 1); };
+  document.getElementById("next").onclick = e => { e.stopPropagation(); show(cur + 1); };
+  document.getElementById("stage").onclick = e => { (e.clientX < innerWidth / 4) ? show(cur - 1) : show(cur + 1); };
+  function fullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    else document.exitFullscreen && document.exitFullscreen();
+  }
+  document.getElementById("fs").onclick = e => { e.stopPropagation(); fullscreen(); };
+  document.addEventListener("keydown", e => {
+    if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === "Home") show(1);
+    else if (e.key === "End") show(N);
+    else if (e.key === "f" || e.key === "F") fullscreen();
+  });
+  let t; const wake = () => { document.body.classList.remove("idle"); clearTimeout(t); t = setTimeout(() => document.body.classList.add("idle"), 2500); };
+  ["mousemove", "keydown", "touchstart"].forEach(ev => document.addEventListener(ev, wake)); wake();
+  let x0 = null;
+  document.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; });
+  document.addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); x0 = null; });
+</script>
+</body>
+</html>
