@@ -35,12 +35,13 @@
   <div class="grp">
     <button id="fs">Pantalla completa</button>
     <a href="agente.html" target="_blank">Demo agente</a>
-    <a href="Taller_Data_Serveo.pdf" download>PDF</a>
+    <a href="Taller_Data_Serveo.pdf?v=20261013b" download>PDF</a>
   </div>
 </div>
 <script>
   const N = 29;
-  const src = i => "slides/" + String(i).padStart(2, "0") + ".jpg";
+  const V = "20261013b";
+  const src = i => "slides/" + String(i).padStart(2, "0") + ".jpg?v=" + V;
   let cur = 1;
   const img = document.getElementById("slide"), count = document.getElementById("count"), prog = document.getElementById("progress");
   const cache = [];
