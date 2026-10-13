@@ -28,19 +28,19 @@
 <div id="bar">
   <div class="grp">
     <button id="prev" aria-label="Anterior">&#8592;</button>
-    <span id="count">1 / 29</span>
+    <span id="count">1 / 30</span>
     <button id="next" aria-label="Siguiente">&#8594;</button>
   </div>
   <span id="help" style="color:var(--muted)">Flechas o clic para avanzar · F pantalla completa · D demo del agente</span>
   <div class="grp">
     <button id="fs">Pantalla completa</button>
     <a href="agente.html" target="_blank">Demo agente</a>
-    <a href="Taller_Data_Serveo.pdf?v=20261013b" download>PDF</a>
+    <a href="Taller_Data_Serveo.pdf?v=20261013c" download>PDF</a>
   </div>
 </div>
 <script>
-  const N = 29;
-  const V = "20261013b";
+  const N = 30;
+  const V = "20261013c";
   const src = i => "slides/" + String(i).padStart(2, "0") + ".jpg?v=" + V;
   let cur = 1;
   const img = document.getElementById("slide"), count = document.getElementById("count"), prog = document.getElementById("progress");
